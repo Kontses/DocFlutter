@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return MaterialApp(
-      title: 'DocFlutter',
+      title: 'Metro Μanuals',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
       ),
       darkTheme: ThemeData(
          colorScheme: ColorScheme.fromSeed(
-           seedColor: Colors.blue, 
+           seedColor: Colors.blue,
            brightness: Brightness.dark
          ),
          useMaterial3: true,
