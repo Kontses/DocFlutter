@@ -1,16 +1,60 @@
-# docflutter
+# DocFlutter
 
-A new Flutter project.
+Μια εφαρμογή Flutter για σάρωση QR codes και προβολή εγχειριδίων (PDF) σε βιομηχανικό περιβάλλον.
 
-## Getting Started
+## Βασικές Λειτουργίες
 
-This project is a starting point for a Flutter application.
+*   **Αυθεντικοποίηση Χρήστη:** Είσοδος/Εγγραφή χρηστών μέσω Email/Password χρησιμοποιώντας Firebase Authentication.
+*   **Σάρωση QR Code:**
+    *   Σάρωση σε πραγματικό χρόνο μέσω της κάμερας της συσκευής.
+    *   Δυνατότητα επιλογής εικόνας από τη συλλογή της συσκευής και ανάλυσή της για QR code.
+    *   Υποστήριξη φακού (torch).
+*   **Λήψη & Προβολή PDF:**
+    *   Λήψη αρχείων PDF από το Firebase Storage με βάση το περιεχόμενο του QR code.
+    *   Αποθήκευση των PDF τοπικά στη συσκευή για offline πρόσβαση.
+    *   Ενσωματωμένος προβολέας PDF.
+*   **Πλοήγηση PDF:**
+    *   Πλοήγηση με swipe.
+    *   Κάθετος "αόρατος" slider στη δεξιά πλευρά για γρήγορη κύλιση.
+    *   Κουμπιά "Προηγούμενη"/"Επόμενη" σελίδα και ένδειξη τρέχουσας/συνολικών σελίδων.
+    *   Δυνατότητα μετάβασης σε συγκεκριμένη σελίδα μέσω του QR code (π.χ., `manual.pdf#page=50`).
+*   **Σελιδοδείκτες:**
+    *   Προσθήκη/Αφαίρεση σελιδοδεικτών σε συγκεκριμένες σελίδες.
+    *   Προβολή λίστας αποθηκευμένων σελιδοδεικτών και άμεση πλοήγηση σε αυτούς.
+    *   Αποθήκευση σελιδοδεικτών ανά PDF στη συσκευή.
+*   **Διαχείριση Τοπικών Αρχείων:**
+    *   Οθόνη προβολής των ήδη κατεβασμένων εγχειριδίων.
+    *   Δυνατότητα ανοίγματος ή διαγραφής τοπικών αρχείων.
+*   **Θέματα Εμφάνισης:**
+    *   Υποστήριξη Light και Dark theme.
+    *   Κουμπί εναλλαγής θέματος στην αρχική οθόνη.
+    *   Αποθήκευση της προτίμησης θέματος.
 
-A few resources to get you started if this is your first Flutter project:
+## Τεχνολογίες
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+*   **Framework:** Flutter (v3.x)
+*   **Γλώσσα:** Dart
+*   **Backend & Cloud:**
+    *   Firebase Authentication (Email/Password)
+    *   Firebase Storage
+*   **Βασικά Πακέτα Flutter:**
+    *   `firebase_core`: Βασική ενσωμάτωση Firebase.
+    *   `firebase_auth`: Για αυθεντικοποίηση.
+    *   `firebase_storage`: Για αποθήκευση/λήψη αρχείων.
+    *   `mobile_scanner`: Για σάρωση QR code (κάμερα & εικόνα).
+    *   `flutter_pdfview`: Για προβολή PDF.
+    *   `path_provider`: Για εύρεση τοπικών καταλόγων αποθήκευσης.
+    *   `http`: Για τη λήψη αρχείων από URL.
+    *   `image_picker`: Για επιλογή εικόνας από τη γκαλερί.
+    *   `shared_preferences`: Για αποθήκευση τοπικών προτιμήσεων (θέμα, σελιδοδείκτες).
+    *   `provider`: Για διαχείριση κατάστασης (state management), κυρίως για το θέμα.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Ρύθμιση
+
+1.  Κλωνοποιήστε το repository.
+2.  Βεβαιωθείτε ότι έχετε εγκατεστημένο το Flutter SDK.
+3.  Ρυθμίστε ένα project στο Firebase και κατεβάστε το αρχείο `google-services.json` (για Android) και/ή το `GoogleService-Info.plist` (για iOS).
+4.  Εκτελέστε `flutterfire configure` για να δημιουργήσετε το `lib/firebase_options.dart`.
+5.  Ενεργοποιήστε το Email/Password sign-in και το Firebase Storage στο Firebase console.
+6.  Εκτελέστε `flutter pub get` για να κατεβάσετε τις εξαρτήσεις.
+7.  Εκτελέστε `flutter run` για να ξεκινήσετε την εφαρμογή.
