@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path_provider/path_provider.dart'; // Προσθήκη import
 import 'package:http/http.dart' as http; // Προσθήκη import
+import 'package:flutter/services.dart'; // Για PlatformException
+import 'package:image_picker/image_picker.dart'; // Εισαγωγή image_picker
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -18,6 +20,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   MobileScannerController cameraController = MobileScannerController();
   bool _isLoading = false;
   String? _loadingMessage;
+  // ImagePicker instance
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
@@ -31,13 +35,41 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   }
 
   // Συνάρτηση για λήψη και προβολή PDF
-  Future<void> _downloadAndShowPdf(String code) async {
-    // ΠΡΟΣΘΗΚΗ PRINT ΓΙΑ DEBUG:
-    print('--- QR Code Scanned ---');
-    print('Raw code from scanner: "$code"');
-    // Το code πρέπει να είναι "ATS_demo.pdf"
+  Future<void> _downloadAndShowPdf(String rawCode) async {
+    if (_isLoading) return;
 
-    if (_isLoading) return; // Αποφυγή διπλής εκτέλεσης
+    print('--- QR Code Scanned ---');
+    print('Raw code from scanner: "$rawCode"');
+
+    // --- Ανάλυση του κώδικα QR --- 
+    String pdfFileName = rawCode;
+    int initialPage = 0; // Προεπιλογή σε 0 (πρώτη σελίδα)
+    const String pageSeparator = '#page=';
+
+    if (rawCode.contains(pageSeparator)) {
+      final parts = rawCode.split(pageSeparator);
+      if (parts.length == 2) {
+        pdfFileName = parts[0]; // Το όνομα αρχείου είναι το πρώτο μέρος
+        final pageString = parts[1];
+        final parsedPage = int.tryParse(pageString);
+        if (parsedPage != null && parsedPage > 0) { // Η σελίδα πρέπει να είναι > 0
+          initialPage = parsedPage - 1; // Μετατροπή σε 0-indexed
+          print('Extracted filename: "$pdfFileName", initial page (0-indexed): $initialPage');
+        } else {
+          print('Invalid page number found: "$pageString". Defaulting to page 0.');
+           pdfFileName = rawCode; // Αν το page number δεν είναι σωστό, πάρε όλο το string ως filename
+           initialPage = 0;
+        }
+      } else {
+         print('Invalid format after separator. Treating whole code as filename.');
+         pdfFileName = rawCode; // Αν η μορφή είναι λάθος μετά το #, πάρε όλο το string ως filename
+         initialPage = 0;
+      }
+    } else {
+        print('No page separator found. Treating whole code as filename.');
+    }
+    // --- Τέλος Ανάλυσης --- 
+
 
     // Έλεγχος αν ο χρήστης είναι συνδεδεμένος
     final user = FirebaseAuth.instance.currentUser;
@@ -58,13 +90,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
     try {
       // 1. Κατασκευή path στο Firebase Storage
-      // Σημαντικό: Το όνομα αρχείου στο Storage ΠΡΕΠΕΙ να ταιριάζει με το 'code' από το QR
-      final storagePath = 'manuals/$code'; // Υποθέτουμε φάκελο 'manuals'
-
-      // ΠΡΟΣΘΗΚΗ PRINT ΓΙΑ DEBUG:
+      final storagePath = 'manuals/$pdfFileName';
       print('Attempting to access Storage Path: "$storagePath"');
-      // --- ΤΕΛΟΣ PRINT ---
-
       final storageRef = FirebaseStorage.instance.ref().child(storagePath);
 
       // 2. Λήψη του Download URL
@@ -88,7 +115,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         }
 
         // Χρήση του νέου καταλόγου
-        final localFilePath = '${manualsDir.path}/$code';
+        final localFilePath = '${manualsDir.path}/$pdfFileName';
         final localFile = File(localFilePath);
         print('Saving PDF to: $localFilePath');
 
@@ -106,7 +133,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
             MaterialPageRoute(
               builder: (ctx) => PdfViewerScreen(
                 pdfPath: localFilePath,
-                pdfName: code, // Χρήση του ονόματος από το QR ως τίτλο
+                pdfName: pdfFileName, // Χρήση του αναλυμένου ονόματος
+                initialPage: initialPage, // Πέρασμα της αρχικής σελίδας
               ),
             ),
           );
@@ -170,15 +198,94 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     // Δεν χρειάζεται να κάνουμε reset το _isLoading εδώ
   }
 
+  // Νέα συνάρτηση για σάρωση από γκαλερί
+  Future<void> _scanImageFromGallery() async {
+    if (_isLoading) return; // Αποφυγή εκτέλεσης αν ήδη φορτώνει
+
+    try {
+      // 1. Επιλογή εικόνας
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image == null) {
+        print('No image selected.');
+        return; // Ο χρήστης ακύρωσε την επιλογή
+      }
+
+      print('Image selected: ${image.path}');
+
+      setState(() {
+        _isLoading = true;
+        _loadingMessage = 'Analyzing image...';
+      });
+
+      // 2. Ανάλυση εικόνας για QR code
+      final BarcodeCapture? result = await cameraController.analyzeImage(image.path);
+
+      // 3. Έλεγχος αποτελέσματος
+      if (result != null && result.barcodes.isNotEmpty) {
+        final String? code = result.barcodes.first.rawValue;
+        if (code != null && code.isNotEmpty) {
+          print('QR Code found in image: $code');
+          // Κλήση της υπάρχουσας συνάρτησης για λήψη/προβολή
+          // Πρέπει να γίνει εκτός του setState
+          await _downloadAndShowPdf(code);
+        } else {
+           print('Found barcode but rawValue is null or empty.');
+           if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('QR code data is empty.')),
+              );
+           }
+        }
+      } else {
+        print('No QR code found in the selected image.');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No QR code found in the image.')),
+          );
+        }
+      }
+    } on PlatformException catch (e) {
+       print('Failed to pick or analyze image: ${e.message}');
+       if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error accessing gallery or analyzing image: ${e.message}')),
+          );
+       }
+    } catch (e) {
+      print('An unexpected error occurred: $e');
+       if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('An unexpected error occurred: ${e.toString()}')),
+          );
+       }
+    } finally {
+      // Επαναφορά κατάστασης φόρτωσης ΜΟΝΟ αν δεν καλέστηκε το _downloadAndShowPdf
+      // (το οποίο κάνει το δικό του reset στο τέλος ή σε σφάλμα)
+      // Πρακτικά, αν δεν βρέθηκε QR code ή υπήρξε σφάλμα *πριν* την κλήση download
+      if (mounted && _isLoading && _loadingMessage == 'Analyzing image...') {
+         setState(() {
+           _isLoading = false;
+           _loadingMessage = null;
+         });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Scan QR Code'),
         actions: [
-          // Απλοποίηση κουμπιού φακού
+          // Κουμπί για επιλογή από γκαλερί
           IconButton(
-            icon: const Icon(Icons.flash_on), // Σταθερό εικονίδιο
+            icon: const Icon(Icons.image),
+            tooltip: 'Scan from Gallery',
+            onPressed: _scanImageFromGallery,
+          ),
+          // Κουμπί φακού
+          IconButton(
+            icon: const Icon(Icons.flash_on),
             tooltip: 'Toggle Torch',
             onPressed: () => cameraController.toggleTorch(),
           ),
