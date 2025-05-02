@@ -1,9 +1,12 @@
 import 'package:docflutter/downloaded_manuals_screen.dart';
 import 'package:docflutter/qr_scanner_screen.dart';
-import 'package:docflutter/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:docflutter/profile_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:docflutter/theme_provider.dart';
+import 'package:docflutter/user_data_provider.dart';
 
 class MyHomePage extends StatelessWidget {
   const MyHomePage({super.key});
@@ -14,25 +17,41 @@ class MyHomePage extends StatelessWidget {
     );
   }
 
-  void _logout(BuildContext context) {
-    FirebaseAuth.instance.signOut();
-  }
-
   void _openDownloadedManuals(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (ctx) => const DownloadedManualsScreen()),
     );
   }
 
+  void _openProfile(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (ctx) => const ProfileScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final user = FirebaseAuth.instance.currentUser;
+    final userDataProvider = Provider.of<UserDataProvider>(context);
+
+    String welcomeMessage;
+    if (userDataProvider.isLoading) {
+      welcomeMessage = 'Loading user...';
+    } else if (userDataProvider.userData != null) {
+      final firstName = userDataProvider.userData!.firstName;
+      if (firstName != null && firstName.trim().isNotEmpty) {
+        welcomeMessage = 'Welcome, $firstName!';
+      } else {
+        welcomeMessage = 'Welcome, ${userDataProvider.userData!.displayName}!';
+      }
+    } else {
+      welcomeMessage = 'Welcome!';
+    }
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Metro Μanuals Home'),
+        title: const Text('Metro Μanuals'),
         actions: [
           IconButton(
             icon: Icon(
@@ -46,9 +65,9 @@ class MyHomePage extends StatelessWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () => _logout(context),
+            icon: const Icon(Icons.account_circle),
+            tooltip: 'Profile & Settings',
+            onPressed: () => _openProfile(context),
           ),
         ],
       ),
@@ -59,22 +78,20 @@ class MyHomePage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Text(
-                'Welcome!',
+                welcomeMessage,
                 style: Theme.of(context).textTheme.headlineMedium,
+                textAlign: TextAlign.center,
               ),
-              if (user?.email != null)
-                 Padding(
-                   padding: const EdgeInsets.only(top: 8.0, bottom: 20.0),
-                   child: Text(user!.email!, style: Theme.of(context).textTheme.bodySmall),
-                 ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 40),
               ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(minimumSize: const Size(200, 45)),
                 onPressed: () => _scanQrCode(context),
                 icon: const Icon(Icons.qr_code_scanner),
                 label: const Text('Scan QR Code'),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               ElevatedButton.icon(
+                 style: ElevatedButton.styleFrom(minimumSize: const Size(200, 45)),
                 onPressed: () => _openDownloadedManuals(context),
                 icon: const Icon(Icons.folder_open),
                 label: const Text('View Downloads'),

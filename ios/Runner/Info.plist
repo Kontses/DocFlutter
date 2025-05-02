@@ -45,5 +45,12 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+    <!-- Permissions for image_picker -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Χρειαζόμαστε πρόσβαση στη βιβλιοθήκη φωτογραφιών σας για την επισύναψη στιγμιότυπων οθόνης στην ανατροφοδότηση.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Προαιρετικό: Χρειαζόμαστε πρόσβαση στην κάμερα για λήψη στιγμιότυπων οθόνης για την ανατροφοδότηση.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Προαιρετικό: Απαιτείται αν γίνεται λήψη βίντεο με την κάμερα.</string>
 </dict>
 </plist>

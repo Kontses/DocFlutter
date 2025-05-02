@@ -91,7 +91,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   void _showBookmarksDialog() {
     if (_bookmarkedPages.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Δεν υπάρχουν αποθηκευμένοι σελιδοδείκτες.')),
+        const SnackBar(content: Text('No saved bookmarks found.')),
       );
       return;
     }
@@ -102,7 +102,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Αποθηκευμένοι Σελιδοδείκτες'),
+        title: const Text('Bookmarks'),
         content: SizedBox(
           width: double.maxFinite, // Για να γεμίσει το πλάτος
           child: ListView.builder(
@@ -112,7 +112,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               final pageIndex = sortedBookmarks[index]; // 0-indexed
               final pageNumber = pageIndex + 1; // 1-indexed για εμφάνιση
               return ListTile(
-                title: Text('Σελίδα $pageNumber'),
+                title: Text('Page $pageNumber'),
                 onTap: () {
                   _controller?.setPage(pageIndex); // Πλοήγηση στη σελίδα (0-indexed)
                   Navigator.of(context).pop(); // Κλείσιμο διαλόγου
@@ -124,7 +124,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Κλείσιμο'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -133,7 +133,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final pageInfo = isReady ? 'Σελίδα ${currentPage + 1} / $pages' : 'Φόρτωση...';
+    final pageInfo = isReady ? 'Page ${currentPage + 1} / $pages' : 'Loading...';
     // Έλεγχος αν η τρέχουσα σελίδα είναι σελιδοδείκτης
     final bool isCurrentPageBookmarked = _bookmarkedPages.contains(currentPage);
 
@@ -153,7 +153,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
           if (isReady && _bookmarkedPages.isNotEmpty) // Εμφάνιση μόνο αν υπάρχουν σελιδοδείκτες
              IconButton(
                icon: const Icon(Icons.bookmarks),
-               tooltip: 'Προβολή Σελιδοδεικτών',
+               tooltip: 'View Bookmarks',
                onPressed: _showBookmarksDialog,
              ),
           // Κουμπί για εναλλαγή σελιδοδείκτη τρέχουσας σελίδας
@@ -163,8 +163,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                  isCurrentPageBookmarked ? Icons.bookmark : Icons.bookmark_border,
                ),
                tooltip: isCurrentPageBookmarked
-                   ? 'Αφαίρεση Σελιδοδείκτη'
-                   : 'Προσθήκη Σελιδοδείκτη',
+                   ? 'Remove Bookmark'
+                   : 'Add Bookmark',
                onPressed: _toggleBookmark,
              ),
            const SizedBox(width: 10), // Λίγο κενό δεξιά
@@ -265,7 +265,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                      min: 0,
                      max: (pages - 1).toDouble(),
                      // divisions: pages > 1 ? pages - 1 : 1, // Αφαίρεση divisions για πιο ομαλό scroll
-                     label: 'Σελ. ${(currentPage + 1)}', // Ετικέτα που εμφανίζεται κατά το σύρσιμο
+                     label: 'Page ${(currentPage + 1)}', // Ετικέτα που εμφανίζεται κατά το σύρσιμο
                      // Όταν ξεκινά το σύρσιμο
                      onChangeStart: (double value) {
                         setState(() {
@@ -310,7 +310,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
               children: <Widget>[
                 IconButton(
                   icon: const Icon(Icons.chevron_left),
-                  tooltip: 'Προηγούμενη Σελίδα',
+                  tooltip: 'Previous Page',
                   onPressed: currentPage > 0
                       ? () {
                           _controller?.setPage(currentPage - 1);
@@ -320,7 +320,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                 Text(pageInfo, style: const TextStyle(fontWeight: FontWeight.bold)),
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
-                  tooltip: 'Επόμενη Σελίδα',
+                  tooltip: 'Next Page',
                   onPressed: currentPage < pages - 1
                       ? () {
                           _controller?.setPage(currentPage + 1);

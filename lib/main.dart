@@ -8,6 +8,7 @@ import 'package:docflutter/downloaded_manuals_screen.dart';
 import 'package:docflutter/home_page.dart';
 import 'package:docflutter/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:docflutter/user_data_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,10 +16,14 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   final themeProvider = ThemeProvider();
+  final userDataProvider = UserDataProvider();
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => themeProvider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider.value(value: userDataProvider),
+      ],
       child: const MyApp(),
     ),
   );
@@ -47,15 +52,19 @@ class MyApp extends StatelessWidget {
          brightness: Brightness.dark,
       ),
       themeMode: themeProvider.themeMode,
-      home: StreamBuilder(
+      home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (ctx, snapshot) {
+          final userDataProvider = ctx.read<UserDataProvider>();
+
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
           if (snapshot.hasData) {
+            userDataProvider.loadUserData(snapshot.data);
             return const MyHomePage();
           } else {
+            userDataProvider.clearUserData();
             return const AuthScreen();
           }
         },

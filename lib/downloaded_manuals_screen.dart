@@ -138,6 +138,7 @@ class _DownloadedManualsScreenState extends State<DownloadedManualsScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Downloaded Manuals'),
         actions: [
           // Κουμπί ανανέωσης
