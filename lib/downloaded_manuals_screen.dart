@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:math'; // Προσθήκη για το pow
 import 'package:docflutter/pdf_viewer_screen.dart';
+import 'package:docflutter/download_history_screen.dart'; // Import της νέας οθόνης
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p; // Για τον χειρισμό path
@@ -55,6 +57,14 @@ class _DownloadedManualsScreenState extends State<DownloadedManualsScreen> {
     }
   }
 
+  // Βοηθητική συνάρτηση για μορφοποίηση μεγέθους αρχείου
+  String _formatBytes(int bytes, int decimals) {
+    if (bytes <= 0) return "0 B";
+    const suffixes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+    var i = (log(bytes) / log(1024)).floor();
+    return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
+  }
+
   void _openPdf(String filePath, String fileName) {
      Navigator.of(context).push(
         MaterialPageRoute(
@@ -100,36 +110,52 @@ class _DownloadedManualsScreenState extends State<DownloadedManualsScreen> {
         itemBuilder: (ctx, index) {
           final file = _pdfFiles[index] as File; // Ξέρουμε ότι είναι File από το φιλτράρισμα
           final fileName = p.basename(file.path); // Πάρε μόνο το όνομα αρχείου
+          final fileSize = file.statSync().size; // Λήψη μεγέθους αρχείου
+          final formattedSize = _formatBytes(fileSize, 1); // Μορφοποίηση μεγέθους
 
           return ListTile(
             leading: const Icon(Icons.picture_as_pdf),
             title: Text(fileName),
             onTap: () => _openPdf(file.path, fileName),
-            trailing: IconButton(
-               icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
-               onPressed: () async {
-                 // Εμφάνιση διαλόγου επιβεβαίωσης πριν τη διαγραφή
-                 final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                       title: const Text('Confirm Deletion'),
-                       content: Text('Are you sure you want to delete $fileName?'),
-                       actions: [
-                         TextButton(
-                           onPressed: () => Navigator.of(ctx).pop(false),
-                           child: const Text('Cancel'),
-                         ),
-                         TextButton(
-                           onPressed: () => Navigator.of(ctx).pop(true),
-                           child: const Text('Delete'),
-                         ),
-                       ],
-                    ),
-                 );
-                 if (confirm == true) {
-                    _deletePdf(file);
-                 }
-               },
+            trailing: Row( // Χρήση Row για να χωρέσουν το μέγεθος και το κουμπί
+              mainAxisSize: MainAxisSize.min, // Για να πιάνει τον ελάχιστο χώρο
+              children: [
+                Text(
+                  formattedSize,
+                  style: const TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey, // Προαιρετικά, για διακριτικό χρώμα
+                  ),
+                ),
+                const SizedBox(width: 8), // Κενό μεταξύ μεγέθους και κουμπιού
+                IconButton(
+                  icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+                  tooltip: 'Delete $fileName', // Προσθήκη tooltip
+                  onPressed: () async {
+                    // Εμφάνιση διαλόγου επιβεβαίωσης πριν τη διαγραφή
+                    final confirm = await showDialog<bool>(
+                       context: context,
+                       builder: (ctx) => AlertDialog(
+                          title: const Text('Confirm Deletion'),
+                          content: Text('Are you sure you want to delete $fileName?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                       ),
+                    );
+                    if (confirm == true) {
+                       _deletePdf(file);
+                    }
+                  },
+                ),
+              ],
             ),
           );
         },
@@ -141,6 +167,16 @@ class _DownloadedManualsScreenState extends State<DownloadedManualsScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('Downloaded Manuals'),
         actions: [
+          // Κουμπί Ιστορικού
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'View Download History',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (ctx) => const DownloadHistoryScreen()),
+              );
+            },
+          ),
           // Κουμπί ανανέωσης
           IconButton(
              icon: const Icon(Icons.refresh),

@@ -161,7 +161,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               const SizedBox(height: 4), // Μικρό κενό
               Text(
                 'Ask us anything, or share your feedback.',
-                style: Theme.of(context).textTheme.bodySmall, // Μικρότερο μέγεθος
+                 style: Theme.of(context).textTheme.bodySmall, // Επαναφορά στο αρχικό στυλ
               ),
               const SizedBox(height: 20), // Μεγαλύτερο κενό πριν το Subject
               // --- Τέλος Μηνύματος Καλωσορίσματος ---

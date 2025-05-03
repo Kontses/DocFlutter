@@ -1,4 +1,5 @@
 import 'dart:io'; // Προσθήκη import
+import 'dart:convert'; // Για JSON encoding/decoding
 import 'package:docflutter/pdf_viewer_screen.dart'; // Προσθήκη import
 import 'package:firebase_auth/firebase_auth.dart'; // Προσθήκη import
 import 'package:firebase_storage/firebase_storage.dart'; // Προσθήκη import
@@ -8,6 +9,7 @@ import 'package:path_provider/path_provider.dart'; // Προσθήκη import
 import 'package:http/http.dart' as http; // Προσθήκη import
 import 'package:flutter/services.dart'; // Για PlatformException
 import 'package:image_picker/image_picker.dart'; // Εισαγωγή image_picker
+import 'package:shared_preferences/shared_preferences.dart'; // Για ιστορικό
 
 class QrScannerScreen extends StatefulWidget {
   const QrScannerScreen({super.key});
@@ -32,6 +34,55 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   void dispose() {
     cameraController.dispose();
     super.dispose();
+  }
+
+  // Συνάρτηση αποθήκευσης στο ιστορικό
+  Future<void> _saveToHistory(String filePath, String fileName, int pageIndex) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      const historyKey = 'download_history';
+
+      // Λήψη υπάρχοντος ιστορικού (λίστα από JSON strings)
+      final existingHistoryJson = prefs.getStringList(historyKey) ?? [];
+
+      // Μετατροπή JSON strings σε λίστα από Maps
+      List<Map<String, dynamic>> historyList = existingHistoryJson
+          .map((item) => jsonDecode(item) as Map<String, dynamic>)
+          .toList();
+
+      // Δημιουργία νέας εγγραφής
+      final newEntry = {
+        'filePath': filePath,
+        'fileName': fileName,
+        'timestamp': DateTime.now().toIso8601String(), // ISO 8601 format
+        'page': pageIndex, // 0-indexed page
+      };
+
+      // Προσθήκη της νέας εγγραφής στην αρχή της λίστας
+      historyList.insert(0, newEntry);
+
+      // Προαιρετικά: Περιορισμός μεγέθους ιστορικού (π.χ., 100 εγγραφές)
+      // if (historyList.length > 100) {
+      //   historyList = historyList.sublist(0, 100);
+      // }
+
+      // Μετατροπή της λίστας Maps πάλι σε λίστα JSON strings
+      final updatedHistoryJson = historyList
+          .map((item) => jsonEncode(item))
+          .toList();
+
+      // Αποθήκευση της ενημερωμένης λίστας
+      await prefs.setStringList(historyKey, updatedHistoryJson);
+      print('Saved download to history: $fileName (Page: $pageIndex)');
+
+    } catch (e) {
+      print("Error saving to download history: $e");
+      // Δεν θέλουμε να μπλοκάρουμε τη ροή του χρήστη αν αποτύχει το ιστορικό
+      // Μπορούμε προαιρετικά να δείξουμε ένα SnackBar
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(content: Text('Could not save to download history.')),
+      // );
+    }
   }
 
   // Συνάρτηση για λήψη και προβολή PDF
@@ -121,6 +172,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
 
         // 6. Εγγραφή των δεδομένων στο τοπικό αρχείο
         await localFile.writeAsBytes(response.bodyBytes);
+
+        // *** Αποθήκευση στο ιστορικό ΠΡΙΝ την πλοήγηση ***
+        await _saveToHistory(localFilePath, pdfFileName, initialPage);
+        // *** Τέλος αποθήκευσης στο ιστορικό ***
 
         setState(() {
           _loadingMessage = 'Opening file...';
