@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // Για μορφοποίηση ημερομηνίας
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/services.dart';
 
 class DownloadHistoryScreen extends StatefulWidget {
   const DownloadHistoryScreen({super.key});
@@ -203,27 +204,38 @@ class _DownloadHistoryScreenState extends State<DownloadHistoryScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Download History'),
-         actions: [
-          // Κουμπί για διαγραφή όλου του ιστορικού (αν υπάρχουν εγγραφές)
-          if (_history.isNotEmpty && !_isLoading)
-            IconButton(
-              icon: const Icon(Icons.delete_sweep_outlined),
-              tooltip: 'Clear All History',
-              onPressed: _clearHistory,
-            ),
-          // Κουμπί ανανέωσης
-          IconButton(
-             icon: const Icon(Icons.refresh),
-             tooltip: 'Refresh History',
-             onPressed: _isLoading ? null : _loadHistory,
-          ),
-        ],
-      ),
-      body: content,
+    // --- Προσθήκη AnnotatedRegion ---
+    final systemUiOverlayStyle = SystemUiOverlayStyle(
+        systemNavigationBarColor: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.black,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+        // Η status bar θα οριστεί από το AppBar
     );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlayStyle,
+      child: Scaffold(
+        appBar: AppBar(
+          // --- Τροποποιήσεις AppBar ---
+          systemOverlayStyle: SystemUiOverlayStyle(
+             statusBarColor: Colors.transparent,
+             statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          // --- Τέλος Τροποποιήσεων AppBar ---
+          title: const Text('Download History'),
+          actions: [
+            // Κουμπί διαγραφής όλου του ιστορικού
+            if (!_isLoading && _history.isNotEmpty) // Εμφάνιση μόνο αν δεν φορτώνει και υπάρχει ιστορικό
+              IconButton(
+                icon: const Icon(Icons.delete_sweep),
+                tooltip: 'Clear All History',
+                onPressed: _clearHistory,
+              ),
+          ],
+        ),
+        body: content,
+      ), // --- Τέλος Scaffold ---
+    ); // --- Τέλος AnnotatedRegion ---
   }
 } 

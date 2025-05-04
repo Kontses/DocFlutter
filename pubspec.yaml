@@ -58,6 +58,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_native_splash: ^2.4.6
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -111,3 +112,28 @@ flutter_launcher_icons:
   # Optional: Adaptive icon configuration for Android 8.0+
   # adaptive_icon_background: "#ffffff" # Background color for adaptive icons
   # adaptive_icon_foreground: "assets/icons/logo_foreground.png" # Foreground layer for adaptive icons
+
+# Configuration for flutter_native_splash
+flutter_native_splash:
+  # Background color for light theme
+  color: "#FFFFFF"
+  # Background color for dark theme
+  color_dark: "#000000"
+  # Logo for light theme (path from project root)
+  image: assets/icons/logo_login_blue.png
+  # Logo for dark theme (path from project root)
+  image_dark: assets/icons/logo_login_white.png
+
+  # For Android 12+ splash screen styles
+  android_12:
+    # Background color for light theme (Android 12+)
+    color: "#FFFFFF"
+    # Background color for dark theme (Android 12+)
+    color_dark: "#000000"
+    # Logo for light theme (Android 12+). Should be an adaptive icon if possible, but using the same for now.
+    image: assets/icons/logo_login_blue.png
+    # Logo for dark theme (Android 12+)
+    image_dark: assets/icons/logo_login_white.png
+    # Icon background color (Android 12+) - useful if the icon is adaptive
+    # icon_background_color: "#111111"
+    # icon_background_color_dark: "#eeeeee"

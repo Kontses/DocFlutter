@@ -3,6 +3,7 @@ import 'package:docflutter/qr_scanner_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 import 'firebase_options.dart';
 import 'package:docflutter/downloaded_manuals_screen.dart';
 import 'package:docflutter/home_page.dart';
@@ -52,22 +53,30 @@ class MyApp extends StatelessWidget {
          brightness: Brightness.dark,
       ),
       themeMode: themeProvider.themeMode,
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (ctx, snapshot) {
-          final userDataProvider = ctx.read<UserDataProvider>();
+      home: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+          systemNavigationBarColor: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.black,
+          systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+        ),
+        child: StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (ctx, snapshot) {
+            final userDataProvider = ctx.read<UserDataProvider>();
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          if (snapshot.hasData) {
-            userDataProvider.loadUserData(snapshot.data);
-            return const MyHomePage();
-          } else {
-            userDataProvider.clearUserData();
-            return const AuthScreen();
-          }
-        },
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(body: Center(child: CircularProgressIndicator()));
+            }
+            if (snapshot.hasData) {
+              userDataProvider.loadUserData(snapshot.data);
+              return const MyHomePage();
+            } else {
+              userDataProvider.clearUserData();
+              return const AuthScreen();
+            }
+          },
+        ),
       ),
     );
   }

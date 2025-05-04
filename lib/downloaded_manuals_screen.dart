@@ -5,6 +5,7 @@ import 'package:docflutter/download_history_screen.dart'; // Import της νέ�
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p; // Για τον χειρισμό path
+import 'package:flutter/services.dart';
 
 class DownloadedManualsScreen extends StatefulWidget {
   const DownloadedManualsScreen({super.key});
@@ -162,30 +163,48 @@ class _DownloadedManualsScreenState extends State<DownloadedManualsScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Downloaded Manuals'),
-        actions: [
-          // Κουμπί Ιστορικού
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: 'View Download History',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (ctx) => const DownloadHistoryScreen()),
-              );
-            },
-          ),
-          // Κουμπί ανανέωσης
-          IconButton(
-             icon: const Icon(Icons.refresh),
-             tooltip: 'Refresh List',
-             onPressed: _isLoading ? null : _loadDownloadedPdfs, // Απενεργοποίηση κατά τη φόρτωση
-          ),
-        ],
-      ),
-      body: content,
+    // --- Προσθήκη AnnotatedRegion ---
+    final systemUiOverlayStyle = SystemUiOverlayStyle(
+        systemNavigationBarColor: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.black,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+        // Η status bar θα οριστεί από το AppBar
     );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlayStyle,
+      child: Scaffold(
+        appBar: AppBar(
+          // --- Τροποποιήσεις AppBar ---
+          systemOverlayStyle: SystemUiOverlayStyle(
+             statusBarColor: Colors.transparent,
+             statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          // backgroundColor: Theme.of(context).colorScheme.inversePrimary, // Αφαίρεση αυτού
+          // --- Τέλος Τροποποιήσεων AppBar ---
+          title: const Text('Downloaded Manuals'),
+          actions: [
+            // Κουμπί Ιστορικού
+            IconButton(
+              icon: const Icon(Icons.history),
+              tooltip: 'View Download History',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (ctx) => const DownloadHistoryScreen()),
+                );
+              },
+            ),
+            // Κουμπί ανανέωσης
+            IconButton(
+               icon: const Icon(Icons.refresh),
+               tooltip: 'Refresh List',
+               onPressed: _isLoading ? null : _loadDownloadedPdfs, // Απενεργοποίηση κατά τη φόρτωση
+            ),
+          ],
+        ),
+        body: content,
+      ), // --- Τέλος Scaffold ---
+    ); // --- Τέλος AnnotatedRegion ---
   }
 } 

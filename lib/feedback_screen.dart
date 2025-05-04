@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:docflutter/user_data_provider.dart';
+import 'package:flutter/services.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -142,107 +143,125 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
     final firstName = userDataProvider.userData?.firstName;
     final greetingName = (firstName != null && firstName.trim().isNotEmpty) ? firstName : 'there';
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Send Feedback'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: ListView( // ListView για αποφυγή overflow
-            children: [
-              // --- Προσθήκη Μηνύματος Καλωσορίσματος ---
-              Text(
-                'Hi $greetingName!',
-                style: Theme.of(context).textTheme.titleLarge, // Μεγαλύτερο μέγεθος
-              ),
-              const SizedBox(height: 4), // Μικρό κενό
-              Text(
-                'Ask us anything, or share your feedback.',
-                 style: Theme.of(context).textTheme.bodySmall, // Επαναφορά στο αρχικό στυλ
-              ),
-              const SizedBox(height: 20), // Μεγαλύτερο κενό πριν το Subject
-              // --- Τέλος Μηνύματος Καλωσορίσματος ---
+    // --- Προσθήκη AnnotatedRegion ---
+    final systemUiOverlayStyle = SystemUiOverlayStyle(
+        systemNavigationBarColor: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.black,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+        // Η status bar θα οριστεί από το AppBar
+    );
 
-              TextFormField(
-                controller: _subjectController,
-                decoration: const InputDecoration(
-                  labelText: 'Subject',
-                  hintText: 'e.g., Bug report, Feature request',
-                  border: OutlineInputBorder(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlayStyle,
+      child: Scaffold(
+        appBar: AppBar(
+          // --- Τροποποιήσεις AppBar ---
+          systemOverlayStyle: SystemUiOverlayStyle(
+             statusBarColor: Colors.transparent,
+             statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          // backgroundColor: Theme.of(context).colorScheme.inversePrimary, // Αφαίρεση αυτού
+          // --- Τέλος Τροποποιήσεων AppBar ---
+          title: const Text('Send Feedback'),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: ListView( // ListView για αποφυγή overflow
+              children: [
+                // --- Προσθήκη Μηνύματος Καλωσορίσματος ---
+                Text(
+                  'Hi $greetingName!',
+                  style: Theme.of(context).textTheme.titleLarge, // Μεγαλύτερο μέγεθος
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a subject.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  hintText: 'Please describe the issue or suggestion...',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 4), // Μικρό κενό
+                Text(
+                  'Ask us anything, or share your feedback.',
+                   style: Theme.of(context).textTheme.bodySmall, // Επαναφορά στο αρχικό στυλ
                 ),
-                maxLines: 5,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a description.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              Row(
-                 children: [
-                   ElevatedButton.icon(
-                     onPressed: _pickScreenshot,
-                     icon: const Icon(Icons.attach_file),
-                     label: const Text('Attach Screenshot'),
-                   ),
-                   const SizedBox(width: 10),
-                    // Εμφάνιση προεπισκόπησης ή ονόματος αρχείου
-                   if (_screenshotFile != null)
-                     Expanded(
-                       child: Text(
-                         _screenshotFile!.name, 
-                         overflow: TextOverflow.ellipsis,
-                         style: Theme.of(context).textTheme.bodySmall
-                       ),
+                const SizedBox(height: 20), // Μεγαλύτερο κενό πριν το Subject
+                // --- Τέλος Μηνύματος Καλωσορίσματος ---
+
+                TextFormField(
+                  controller: _subjectController,
+                  decoration: const InputDecoration(
+                    labelText: 'Subject',
+                    hintText: 'e.g., Bug report, Feature request',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a subject.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    hintText: 'Please describe the issue or suggestion...',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 5,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a description.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                   children: [
+                     ElevatedButton.icon(
+                       onPressed: _pickScreenshot,
+                       icon: const Icon(Icons.attach_file),
+                       label: const Text('Attach Screenshot'),
                      ),
-                 ],
-              ),
-               // Προαιρετική προεπισκόπηση εικόνας
-              if (_screenshotFile != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10.0),
-                  child: Image.file(
-                    File(_screenshotFile!.path),
-                    height: 150,
-                    fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft, // Στοίχιση αριστερά
-                  ),
+                     const SizedBox(width: 10),
+                      // Εμφάνιση προεπισκόπησης ή ονόματος αρχείου
+                     if (_screenshotFile != null)
+                       Expanded(
+                         child: Text(
+                           _screenshotFile!.name, 
+                           overflow: TextOverflow.ellipsis,
+                           style: Theme.of(context).textTheme.bodySmall
+                         ),
+                       ),
+                   ],
                 ),
-              const SizedBox(height: 24),
-              if (_isSubmitting)
-                const Center(child: CircularProgressIndicator())
-              else
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                     padding: const EdgeInsets.symmetric(vertical: 12),
-                     textStyle: const TextStyle(fontSize: 16)
+                 // Προαιρετική προεπισκόπηση εικόνας
+                if (_screenshotFile != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10.0),
+                    child: Image.file(
+                      File(_screenshotFile!.path),
+                      height: 150,
+                      fit: BoxFit.contain,
+                      alignment: Alignment.centerLeft, // Στοίχιση αριστερά
+                    ),
                   ),
-                  onPressed: _submitFeedback,
-                  child: const Text('Submit Feedback'),
-                ),
-            ],
+                const SizedBox(height: 24),
+                if (_isSubmitting)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                       padding: const EdgeInsets.symmetric(vertical: 12),
+                       textStyle: const TextStyle(fontSize: 16)
+                    ),
+                    onPressed: _submitFeedback,
+                    child: const Text('Submit Feedback'),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
-    );
+    ); // --- Τέλος AnnotatedRegion ---
   }
 } 

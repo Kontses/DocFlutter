@@ -3,6 +3,7 @@ import 'dart:convert'; // Για JSON encoding/decoding
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Εισαγωγή
+import 'package:flutter/services.dart';
 
 class PdfViewerScreen extends StatefulWidget {
   final String pdfPath;
@@ -137,9 +138,26 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     // Έλεγχος αν η τρέχουσα σελίδα είναι σελιδοδείκτης
     final bool isCurrentPageBookmarked = _bookmarkedPages.contains(currentPage);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Column( // Χρήση Column για τίτλο και σελίδες
+    // --- Προσθήκη AnnotatedRegion ---
+    final systemUiOverlayStyle = SystemUiOverlayStyle(
+        systemNavigationBarColor: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.black,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+        // Η status bar θα οριστεί από το AppBar
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlayStyle,
+      child: Scaffold(
+        appBar: AppBar(
+          // --- Τροποποιήσεις AppBar ---
+          systemOverlayStyle: SystemUiOverlayStyle(
+             statusBarColor: Colors.transparent,
+             statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          // --- Τέλος Τροποποιήσεων AppBar ---
+          title: Column( // Χρήση Column για τίτλο και σελίδες
            crossAxisAlignment: CrossAxisAlignment.start,
            children: [
              Text(widget.pdfName, style: const TextStyle(fontSize: 16)),
@@ -331,6 +349,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
             ),
           )
         : null,
-    );
+      ), // --- Τέλος Scaffold ---
+    ); // --- Τέλος AnnotatedRegion ---
   }
 } 

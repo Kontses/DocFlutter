@@ -5,6 +5,7 @@ import 'package:provider/provider.dart'; // Επαναφορά import
 import 'package:docflutter/feedback_screen.dart';
 import 'package:docflutter/user_data_provider.dart'; // Import UserDataProvider
 // import 'package:docflutter/theme_provider.dart'; // Δεν χρειάζεται πια εδώ
+import 'package:flutter/services.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -93,105 +94,123 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final UserData? userData = userDataProvider.userData;
     final String? errorMessage = userDataProvider.errorMessage;
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary, // Αλλαγή σε inversePrimary
-        // foregroundColor: Theme.of(context).colorScheme.onPrimary, // Αφαίρεση foreground
-        title: const Text('Profile & Settings'),
-      ),
-      body: isLoading // Έλεγχος φόρτωσης από τον provider
-          ? const Center(child: CircularProgressIndicator())
-           // Έλεγχος αν δεν φορτώνει, δεν υπάρχουν δεδομένα ΚΑΙ υπάρχει μήνυμα σφάλματος
-          : !isLoading && userData == null && errorMessage != null
-              ? Center(child: Padding(
-                   padding: const EdgeInsets.all(16.0),
-                   child: Text(errorMessage, textAlign: TextAlign.center),
-                ))
-              : ListView( // Χρήση ListView για scrolling αν χρειαστεί
-                  padding: const EdgeInsets.all(16.0),
-                  children: [
-                    if (userData != null) ...[
-                       ListTile(
-                         leading: const Icon(Icons.person),
-                         title: const Text('First Name'),
-                         // Χρήση δεδομένων από το userData object
-                         subtitle: Text(userData.firstName ?? 'Not set'),
-                       ),
-                       ListTile(
-                         leading: const Icon(Icons.person_outline),
-                         title: const Text('Last Name'),
-                         subtitle: Text(userData.lastName ?? 'Not set'),
-                       ),
-                       ListTile(
-                         leading: const Icon(Icons.email),
-                         title: const Text('Email'),
-                         subtitle: Text(userData.email ?? 'No email found'),
-                       ),
-                       const Divider(),
-                    ],
-                     // Εμφάνιση error ακόμα κι αν έχουμε κάποια παλιά δεδομένα
-                     if (errorMessage != null && !isLoading)
-                       Padding(
-                         padding: const EdgeInsets.symmetric(vertical: 8.0),
-                         child: Text(errorMessage, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                       ),
-
-                    ListTile(
-                      leading: const Icon(Icons.lock_reset),
-                      title: const Text('Change Password'),
-                      subtitle: const Text('Send password reset email'),
-                      trailing: const Icon(Icons.send),
-                      onTap: _sendPasswordResetEmail,
-                    ),
-                    const Divider(),
-
-                    // Προσθήκη ListTile για Feedback πριν το Logout
-                    ListTile(
-                      leading: const Icon(Icons.feedback),
-                      title: const Text('Send Feedback'),
-                      subtitle: const Text('Report an issue or suggest a feature'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16), // Προαιρετικό εικονίδιο
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (ctx) => const FeedbackScreen()),
-                        );
-                      },
-                    ),
-                    const Divider(),
-
-                    ListTile(
-                      leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-                      title: Text(
-                        'Logout',
-                         style: TextStyle(color: Theme.of(context).colorScheme.error)
-                      ),
-                      onTap: () async {
-                         // Προαιρετικό: Εμφάνιση διαλόγου επιβεβαίωσης
-                         final confirmLogout = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: const Text('Confirm Logout'),
-                              content: const Text('Are you sure you want to log out?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                   style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
-                                  onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: const Text('Logout'),
-                                ),
-                              ],
-                            ),
-                         );
-                         if (confirmLogout == true) {
-                           await _logout();
-                         }
-                      },
-                    ),
-                  ],
-                ),
+    // --- Προσθήκη AnnotatedRegion ---
+    final systemUiOverlayStyle = SystemUiOverlayStyle(
+        systemNavigationBarColor: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.black,
+        systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+        // Η status bar θα οριστεί από το AppBar
     );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlayStyle,
+      child: Scaffold(
+        appBar: AppBar(
+          // --- Τροποποιήσεις AppBar ---
+          systemOverlayStyle: SystemUiOverlayStyle(
+             statusBarColor: Colors.transparent,
+             statusBarIconBrightness: Theme.of(context).brightness == Brightness.light ? Brightness.dark : Brightness.light,
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          // backgroundColor: Theme.of(context).colorScheme.inversePrimary, // Αφαίρεση αυτού
+          // foregroundColor: Theme.of(context).colorScheme.onPrimary, // Αφαίρεση foreground
+          // --- Τέλος Τροποποιήσεων AppBar ---
+          title: const Text('Profile & Settings'),
+        ),
+        body: isLoading // Έλεγχος φόρτωσης από τον provider
+            ? const Center(child: CircularProgressIndicator())
+             // Έλεγχος αν δεν φορτώνει, δεν υπάρχουν δεδομένα ΚΑΙ υπάρχει μήνυμα σφάλματος
+            : !isLoading && userData == null && errorMessage != null
+                ? Center(child: Padding(
+                     padding: const EdgeInsets.all(16.0),
+                     child: Text(errorMessage, textAlign: TextAlign.center),
+                  ))
+                : ListView( // Χρήση ListView για scrolling αν χρειαστεί
+                    padding: const EdgeInsets.all(16.0),
+                    children: [
+                      if (userData != null) ...[
+                         ListTile(
+                           leading: const Icon(Icons.person),
+                           title: const Text('First Name'),
+                           // Χρήση δεδομένων από το userData object
+                           subtitle: Text(userData.firstName ?? 'Not set'),
+                         ),
+                         ListTile(
+                           leading: const Icon(Icons.person_outline),
+                           title: const Text('Last Name'),
+                           subtitle: Text(userData.lastName ?? 'Not set'),
+                         ),
+                         ListTile(
+                           leading: const Icon(Icons.email),
+                           title: const Text('Email'),
+                           subtitle: Text(userData.email ?? 'No email found'),
+                         ),
+                         const Divider(),
+                      ],
+                       // Εμφάνιση error ακόμα κι αν έχουμε κάποια παλιά δεδομένα
+                       if (errorMessage != null && !isLoading)
+                         Padding(
+                           padding: const EdgeInsets.symmetric(vertical: 8.0),
+                           child: Text(errorMessage, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                         ),
+
+                      ListTile(
+                        leading: const Icon(Icons.lock_reset),
+                        title: const Text('Change Password'),
+                        subtitle: const Text('Send password reset email'),
+                        trailing: const Icon(Icons.send),
+                        onTap: _sendPasswordResetEmail,
+                      ),
+                      const Divider(),
+
+                      // Προσθήκη ListTile για Feedback πριν το Logout
+                      ListTile(
+                        leading: const Icon(Icons.feedback),
+                        title: const Text('Send Feedback'),
+                        subtitle: const Text('Report an issue or suggest a feature'),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16), // Προαιρετικό εικονίδιο
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (ctx) => const FeedbackScreen()),
+                          );
+                        },
+                      ),
+                      const Divider(),
+
+                      ListTile(
+                        leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+                        title: Text(
+                          'Logout',
+                           style: TextStyle(color: Theme.of(context).colorScheme.error)
+                        ),
+                        onTap: () async {
+                           // Προαιρετικό: Εμφάνιση διαλόγου επιβεβαίωσης
+                           final confirmLogout = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Confirm Logout'),
+                                content: const Text('Are you sure you want to log out?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                     style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                                    onPressed: () => Navigator.of(ctx).pop(true),
+                                    child: const Text('Logout'),
+                                  ),
+                                ],
+                              ),
+                           );
+                           if (confirmLogout == true) {
+                             await _logout();
+                           }
+                        },
+                      ),
+                    ],
+                  ),
+      ), // --- Τέλος Scaffold ---
+    ); // --- Τέλος AnnotatedRegion ---
   }
 } 
