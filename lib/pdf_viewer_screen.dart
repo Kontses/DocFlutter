@@ -36,12 +36,19 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   // Instance των SharedPreferences
   SharedPreferences? _prefs;
 
+  // --- Μεταβλητές για τον custom slider ---
+  double _sliderValue = 0.0; // 0.0 (top) to 1.0 (bottom)
+  double _dragStartY = 0.0;
+  double _dragStartSliderValue = 0.0;
+  final double _sliderPadding = 10.0; // Padding πάνω/κάτω για το slider
+
   @override
   void initState() {
     super.initState();
-    // Αρχικοποίηση currentPage με βάση το widget.initialPage
     currentPage = widget.initialPage;
-    _loadBookmarks(); // Φόρτωση σελιδοδεικτών κατά την έναρξη
+    _loadBookmarks();
+    // Αρχικοποίηση _sliderValue με βάση την αρχική σελίδα
+    // (Θα γίνει όταν φορτώσουν οι σελίδες στο onRender)
   }
 
   // Συνάρτηση για φόρτωση σελιδοδεικτών
@@ -188,168 +195,176 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
            const SizedBox(width: 10), // Λίγο κενό δεξιά
         ],
       ),
-      body: Stack( // Χρήση Stack για το PDF και το Slider
-        children: <Widget>[
-          PDFView(
-            filePath: widget.pdfPath,
-            enableSwipe: true,
-            swipeHorizontal: false,
-            autoSpacing: false,
-            pageFling: true,
-            pageSnap: false,
-            defaultPage: currentPage,
-            fitPolicy: FitPolicy.WIDTH,
-            preventLinkNavigation: false, // Αν θέλετε να απενεργοποιήσετε links στο PDF
-            onRender: (pagesValue) {
-              if (mounted) {
-                 setState(() {
-                   pages = pagesValue ?? 0;
-                   isReady = true;
-                   // Διασφάλιση ότι η αρχική σελίδα είναι εντός ορίων
-                   if (widget.initialPage >= pages) {
-                       currentPage = pages > 0 ? pages - 1 : 0;
-                       _controller?.setPage(currentPage);
-                   }
-                 });
-              }
-            },
-            onError: (error) {
-               if (mounted) {
-                  setState(() {
-                    errorMessage = error.toString();
-                  });
-               }
-            },
-            onPageError: (page, error) {
-               if (mounted) {
-                  setState(() {
-                    errorMessage = '$page: ${error.toString()}';
-                  });
-               }
-            },
-            onViewCreated: (PDFViewController pdfViewController) {
-               _controller = pdfViewController;
-            },
-            onPageChanged: (int? page, int? total) {
-               if (mounted && page != null) {
-                 // Αλλάζουμε το state μόνο αν δεν σύρουμε το slider
-                 // ή αν η κατάσταση σελιδοδείκτη άλλαξε (για να ανανεωθεί το εικονίδιο)
-                 if (!_isSliderScrolling) {
-                    setState(() {
-                       currentPage = page;
-                       // Δεν χρειάζεται να ξαναδιαβάσουμε τα bookmarks εδώ,
-                       // η κατάσταση του isCurrentPageBookmarked θα ενημερωθεί
-                       // αυτόματα στην επόμενη κλήση του build.
-                    });
-                 } else {
-                   // Ακόμα κι αν σύρουμε το slider, θέλουμε το AppBar icon
-                   // να ενημερωθεί αν αλλάξει η σελίδα
+      body: Stack( // Το Stack απευθείας
+          children: <Widget>[
+            PDFView(
+              filePath: widget.pdfPath,
+              enableSwipe: true,
+              swipeHorizontal: false,
+              autoSpacing: false,
+              pageFling: true,
+              pageSnap: false,
+              defaultPage: currentPage,
+              fitPolicy: FitPolicy.WIDTH,
+              preventLinkNavigation: false,
+              onRender: (pagesValue) {
+                if (mounted) {
                    setState(() {
-                     currentPage = page;
+                     pages = pagesValue ?? 0;
+                     isReady = true;
+                     int initialPageResolved = widget.initialPage;
+                     if (initialPageResolved >= pages && pages > 0) {
+                       initialPageResolved = pages - 1;
+                     }
+                     currentPage = initialPageResolved;
+                     // Αρχικοποίηση _sliderValue εδώ
+                     if (pages > 1) {
+                       _sliderValue = currentPage / (pages - 1);
+                     }
+                     if (currentPage != widget.initialPage) {
+                       _controller?.setPage(currentPage);
+                     }
                    });
+                }
+              },
+              onError: (error) {
+                 if (mounted) {
+                    setState(() {
+                      errorMessage = error.toString();
+                    });
                  }
-               }
-            },
-          ),
-          errorMessage.isEmpty
-              ? !isReady
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : Container()
-              : Center(
-                  child: Text(errorMessage),
-                ),
-           // Κάθετος Slider στη δεξιά πλευρά (πάνω από το PDF)
-           if(isReady && pages > 1)
-             Positioned(
-               right: 0,
-               top: 10, // Λίγο κενό πάνω
-               bottom: 10, // Λίγο κενό κάτω
-               width: 40, // Πλάτος για να πιάνει το touch
-               child: RotatedBox(
-                 quarterTurns: 1, // Περιστροφή για να γίνει κάθετο
-                 child: SliderTheme(
-                    // Προσαρμογή εμφάνισης slider
-                   data: SliderTheme.of(context).copyWith(
-                     activeTrackColor: Colors.transparent, // Αόρατη γραμμή (ενεργή)
-                     inactiveTrackColor: Colors.transparent, // Αόρατη γραμμή (ανενεργή)
-                     thumbColor: Colors.blue.withOpacity(0.7), // Χρώμα δείκτη με διαφάνεια
-                     overlayColor: Colors.blue.withOpacity(0.2), // Χρώμα γύρω από τον δείκτη όταν πατιέται
-                     trackHeight: 2.0, // Μπορεί να χρειάζεται μικρό ύψος για να πιάνει το touch
-                   ),
-                   child: Slider(
-                     value: currentPage.toDouble(),
-                     min: 0,
-                     max: (pages - 1).toDouble(),
-                     // divisions: pages > 1 ? pages - 1 : 1, // Αφαίρεση divisions για πιο ομαλό scroll
-                     label: 'Page ${(currentPage + 1)}', // Ετικέτα που εμφανίζεται κατά το σύρσιμο
-                     // Όταν ξεκινά το σύρσιμο
-                     onChangeStart: (double value) {
-                        setState(() {
-                          _isSliderScrolling = true;
-                        });
-                     },
-                     // Καθώς αλλάζει η τιμή (σύρσιμο)
-                     onChanged: (double value) {
-                       final newPage = value.round();
-                       // Αλλάζουμε τοπικά το state για άμεση απόκριση του slider
-                       setState(() {
-                           currentPage = newPage;
-                       });
-                     },
-                     // Όταν τελειώνει το σύρσιμο
-                     onChangeEnd: (double value) {
-                       final newPage = value.round();
-                       _controller?.setPage(newPage); // Ορίζουμε τη σελίδα στο PDF controller
-                       // Περιμένουμε λίγο πριν επιτρέψουμε ξανά στο onPageChanged να αλλάξει το state,
-                       // για να αποφύγουμε το τρεμόπαιγμα
-                       Future.delayed(const Duration(milliseconds: 200), () {
-                          if(mounted) {
-                              setState(() {
-                                _isSliderScrolling = false;
-                              });
-                          }
-                       });
-                     },
-                   ),
-                 ),
-               ),
-             ),
-        ],
-      ),
-      // Επαναφορά του αρχικού BottomAppBar
-      bottomNavigationBar: isReady && pages > 1
-        ? BottomAppBar(
-            // Ορισμός μικρότερου ύψους
-            height: 48.0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: <Widget>[
-                IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  tooltip: 'Previous Page',
-                  onPressed: currentPage > 0
-                      ? () {
-                          _controller?.setPage(currentPage - 1);
-                        }
-                      : null,
-                ),
-                Text(pageInfo, style: const TextStyle(fontWeight: FontWeight.bold)),
-                IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  tooltip: 'Next Page',
-                  onPressed: currentPage < pages - 1
-                      ? () {
-                          _controller?.setPage(currentPage + 1);
-                        }
-                      : null,
-                ),
-              ],
+              },
+              onPageError: (page, error) {
+                 if (mounted) {
+                    setState(() {
+                      errorMessage = '$page: ${error.toString()}';
+                    });
+                 }
+              },
+              onViewCreated: (PDFViewController pdfViewController) {
+                 _controller = pdfViewController;
+              },
+              onPageChanged: (int? page, int? total) {
+                 if (mounted && page != null && pages > 1) {
+                    setState(() {
+                      currentPage = page;
+                      // Ενημέρωση _sliderValue βάσει της νέας σελίδας
+                      _sliderValue = page / (pages - 1);
+                    });
+                 }
+              },
             ),
-          )
-        : null,
-      ), // --- Τέλος Scaffold ---
-    ); // --- Τέλος AnnotatedRegion ---
+            // Τα υπόλοιπα παιδιά του Stack (Error message, etc.)
+            errorMessage.isEmpty
+                ? !isReady
+                    ? const Center(
+                        child: CircularProgressIndicator(),
+                      )
+                    : Container()
+                : Center(
+                    child: Text(errorMessage),
+                  ),
+
+            // --- Custom Slider --- (Προστίθεται εδώ)
+            if (isReady && pages > 1)
+              Builder( // Χρήση Builder για να πάρουμε το σωστό context για το ύψος
+                builder: (context) {
+                  final appBarHeight = Scaffold.of(context).appBarMaxHeight; // Ύψος AppBar
+                  final bottomBarHeight = MediaQuery.of(context).padding.bottom + // Ύψος κάτω padding
+                                         (Scaffold.of(context).hasFloatingActionButton ? kFloatingActionButtonMargin : 0) +
+                                         kBottomNavigationBarHeight; // Εκτίμηση για BottomAppBar (ή 0 αν δεν υπάρχει)
+                  final availableHeight = MediaQuery.of(context).size.height -
+                      (appBarHeight ?? kToolbarHeight) - // Fallback σε kToolbarHeight
+                      (bottomBarHeight) -
+                      (2 * _sliderPadding); // Αφαίρεση padding πάνω/κάτω
+
+                  // Υπολογισμός θέσης 'top' για το εικονίδιο
+                  final double sliderTopPosition = _sliderPadding + (_sliderValue * availableHeight);
+
+                  return Positioned(
+                    top: sliderTopPosition,
+                    right: 5.0, // Μικρή απόσταση από τη δεξιά άκρη
+                    child: GestureDetector(
+                      onVerticalDragStart: (details) {
+                        _dragStartY = details.globalPosition.dy;
+                        _dragStartSliderValue = _sliderValue;
+                      },
+                      onVerticalDragUpdate: (details) {
+                        if (availableHeight <= 0) return; // Αποφυγή διαίρεσης με μηδέν
+
+                        final dragDeltaY = details.globalPosition.dy - _dragStartY;
+                        final deltaRatio = dragDeltaY / availableHeight;
+                        double newSliderValue = _dragStartSliderValue + deltaRatio;
+                        newSliderValue = newSliderValue.clamp(0.0, 1.0);
+
+                        // Υπολογισμός σελίδας
+                        final targetPage = (newSliderValue * (pages - 1)).round();
+
+                        // Άμεση πλοήγηση και ενημέρωση state
+                        if (targetPage != currentPage && _controller != null) {
+                          _controller!.setPage(targetPage);
+                          // Ενημέρωση currentPage και _sliderValue
+                          // για να μετακινηθεί το εικονίδιο άμεσα
+                          setState(() {
+                            currentPage = targetPage; // Ενημέρωση currentPage
+                            _sliderValue = newSliderValue;
+                          });
+                        } else {
+                          // Απλή ενημέρωση της θέσης του slider thumb αν η σελίδα δεν άλλαξε
+                           setState(() {
+                             _sliderValue = newSliderValue;
+                           });
+                        }
+                      },
+                      child: Icon(
+                        Icons.drag_handle,
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                        size: 28.0,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            // --- Τέλος Custom Slider ---
+          ],
+        ),
+        // Μετακίνηση BottomAppBar εντός Scaffold
+        bottomNavigationBar: isReady && pages > 1
+            ? BottomAppBar(
+                height: 48.0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: <Widget>[
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      tooltip: 'Previous Page',
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints(minWidth: 44.0, minHeight: 44.0),
+                      onPressed: currentPage > 0
+                          ? () {
+                              _controller?.setPage(currentPage - 1);
+                            }
+                          : null,
+                    ),
+                    Text(pageInfo, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      tooltip: 'Next Page',
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints(minWidth: 44.0, minHeight: 44.0),
+                      onPressed: currentPage < pages - 1
+                          ? () {
+                              _controller?.setPage(currentPage + 1);
+                            }
+                          : null,
+                    ),
+                  ],
+                ),
+              )
+            : null,
+      ),
+    );
   }
 } 
