@@ -31,6 +31,9 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   // Μεταβλητή για να ξέρουμε αν ο χρήστης σύρει το slider
   bool _isSliderScrolling = false;
 
+  bool _areBarsVisible = true; // Νέα μεταβλητή για ορατότητα bars
+  Timer? _visibilityTimer; // Νέος timer
+
   // Set για αποθήκευση των σελιδοδεικτών (0-indexed)
   Set<int> _bookmarkedPages = {};
   // Instance των SharedPreferences
@@ -49,6 +52,24 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     _loadBookmarks();
     // Αρχικοποίηση _sliderValue με βάση την αρχική σελίδα
     // (Θα γίνει όταν φορτώσουν οι σελίδες στο onRender)
+
+    // Επιτρέπουμε όλα τα orientations όταν ανοίγει το PDF
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    _cancelVisibilityTimer(); // Ακύρωση timer
+    // Επαναφέρουμε το προτιμώμενο orientation σε portrait όταν κλείνει το PDF
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+    super.dispose();
   }
 
   // Συνάρτηση για φόρτωση σελιδοδεικτών
@@ -172,7 +193,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                Text(pageInfo, style: const TextStyle(fontSize: 12)),
            ],
         ),
-        // Προσθήκη action button για σελιδοδείκτη
+        // Προσθήκη action button για σελιδοδεικτή
         actions: [
           // Κουμπί για εμφάνιση λίστας σελιδοδεικτών
           if (isReady && _bookmarkedPages.isNotEmpty) // Εμφάνιση μόνο αν υπάρχουν σελιδοδείκτες
@@ -191,6 +212,26 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                    ? 'Remove Bookmark'
                    : 'Add Bookmark',
                onPressed: _toggleBookmark,
+             ),
+           // Νέο κουμπί περιστροφής
+           if (isReady)
+             IconButton(
+               icon: const Icon(Icons.screen_rotation),
+               tooltip: 'Rotate Screen',
+               onPressed: () {
+                 final currentOrientation = MediaQuery.of(context).orientation;
+                 if (currentOrientation == Orientation.portrait) {
+                   SystemChrome.setPreferredOrientations([
+                     DeviceOrientation.landscapeLeft,
+                     DeviceOrientation.landscapeRight,
+                   ]);
+                 } else {
+                   SystemChrome.setPreferredOrientations([
+                     DeviceOrientation.portraitUp,
+                     DeviceOrientation.portraitDown,
+                   ]);
+                 }
+               },
              ),
            const SizedBox(width: 10), // Λίγο κενό δεξιά
         ],
@@ -224,6 +265,8 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
                      if (currentPage != widget.initialPage) {
                        _controller?.setPage(currentPage);
                      }
+
+                     // Νέα λογική για έλεγχο orientation (αφαιρέθηκε)
                    });
                 }
               },
@@ -367,4 +410,4 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
       ),
     );
   }
-} 
+}
