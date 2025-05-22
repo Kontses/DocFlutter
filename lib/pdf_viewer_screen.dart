@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async'; // Import for Timer
 import 'dart:convert'; // Για JSON encoding/decoding
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
@@ -31,8 +32,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
   // Μεταβλητή για να ξέρουμε αν ο χρήστης σύρει το slider
   bool _isSliderScrolling = false;
 
-  bool _areBarsVisible = true; // Νέα μεταβλητή για ορατότητα bars
-  Timer? _visibilityTimer; // Νέος timer
 
   // Set για αποθήκευση των σελιδοδεικτών (0-indexed)
   Set<int> _bookmarkedPages = {};
@@ -64,7 +63,6 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
 
   @override
   void dispose() {
-    _cancelVisibilityTimer(); // Ακύρωση timer
     // Επαναφέρουμε το προτιμώμενο orientation σε portrait όταν κλείνει το PDF
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -103,6 +101,7 @@ class _PdfViewerScreenState extends State<PdfViewerScreen> {
     final String bookmarksJson = jsonEncode(_bookmarkedPages.toList());
     await _prefs?.setString(key, bookmarksJson);
   }
+
 
   // Συνάρτηση για προσθήκη/αφαίρεση σελιδοδείκτη
   void _toggleBookmark() {
